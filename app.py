@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import time
+import asyncio
 
 # Load data from GitHub
 RAW_GITHUB_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/"
@@ -80,15 +81,22 @@ def train_model(data):
 st.title("Memristor Response Simulator")
 st.write("Press a button to simulate memristor response to pressure.")
 
+# Ensure proper asyncio event loop handling
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
 model = train_model(data)  # Train the model
 
 def show_processing_animation():
-    with st.empty():
-        for _ in range(3):
-            st.write("🔄 Processing...")
-            time.sleep(0.5)
-            st.write("🟦")  # Simulated memristor block
-            time.sleep(0.5)
+    placeholder = st.empty()
+    for _ in range(3):
+        placeholder.write("🔄 Processing...")
+        time.sleep(0.5)
+        placeholder.write("🟦 Memristor Active")
+        time.sleep(0.5)
+    placeholder.empty()
 
 selected_pressure = None
 if st.button("Apply 0.2 MPa"):
@@ -102,19 +110,23 @@ elif st.button("Apply 0.4 MPa"):
     show_processing_animation()
 
 if selected_pressure:
-    model.load_state_dict(torch.load("memristor_model.pth"))
-    model.eval()
-    
-    X_test = torch.tensor(time_values, dtype=torch.float32).view(-1, 1)
-    with torch.no_grad():
-        predicted_voltage = model(X_test).numpy().flatten()
-    
-    # Plot the response
-    st.write("### Plot:")
-    fig, ax = plt.subplots()
-    ax.plot(time_values, predicted_voltage, marker='o', linestyle='-', label=f'{selected_pressure} MPa')
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Voltage (V)")
-    ax.set_title(f"Memristor Response to {selected_pressure} MPa")
-    ax.legend()
-    st.pyplot(fig)
+    # Ensure model file exists before loading
+    try:
+        model.load_state_dict(torch.load("memristor_model.pth"))
+        model.eval()
+        
+        X_test = torch.tensor(time_values, dtype=torch.float32).view(-1, 1)
+        with torch.no_grad():
+            predicted_voltage = model(X_test).numpy().flatten()
+        
+        # Plot the response
+        st.write("### Plot:")
+        fig, ax = plt.subplots()
+        ax.plot(time_values, predicted_voltage, marker='o', linestyle='-', label=f'{selected_pressure} MPa')
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Voltage (V)")
+        ax.set_title(f"Memristor Response to {selected_pressure} MPa")
+        ax.legend()
+        st.pyplot(fig)
+    except FileNotFoundError:
+        st.error("Model file not found. Please retrain the model.")

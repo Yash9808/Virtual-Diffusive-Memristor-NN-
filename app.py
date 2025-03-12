@@ -11,7 +11,7 @@ def load_data():
     data = {}
     pressures = [0.2, 0.3, 0.4]
     for p in pressures:
-        df = pd.read_csv(f"{p}MPa.csv")  # Assumes CSV has one column of voltage data
+        df = pd.read_csv(f"Delay_0.2sec_{p}MPa.csv")  # Assumes CSV has one column of voltage data
         data[p] = df.values.flatten()
     return data
 

@@ -24,7 +24,15 @@ def load_data():
         if "Time" in df.columns and "Channel A" in df.columns:
             if time_values is None:
                 time_values = df["Time"].values  # Use the time column from the first file
-            data[p] = df["Channel A"].values  # Voltage data
+            
+            voltage_values = df["Channel A"].values
+            
+            # Ensure the length matches
+            min_length = min(len(time_values), len(voltage_values))
+            time_values = time_values[:min_length]
+            voltage_values = voltage_values[:min_length]
+            
+            data[p] = voltage_values  # Voltage data
         else:
             raise ValueError(f"Columns 'Time' and 'Channel A' not found in {filename}")
     
@@ -54,6 +62,9 @@ def train_model(data):
     for pressure, voltage in data.items():
         X_train = torch.tensor(time, dtype=torch.float32).view(-1, 1)
         y_train = torch.tensor(voltage, dtype=torch.float32).view(-1, 1)
+        
+        if X_train.shape[0] != y_train.shape[0]:
+            raise ValueError(f"Mismatch in data size: X_train ({X_train.shape[0]}) vs y_train ({y_train.shape[0]})")
         
         for epoch in range(1000):  # Training loop
             optimizer.zero_grad()

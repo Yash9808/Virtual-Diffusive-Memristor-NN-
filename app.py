@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+time
+import time
 
 # Load data from GitHub
 RAW_GITHUB_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/"
@@ -38,7 +40,7 @@ def load_data():
     
     return data, time_values
 
-data, time = load_data()
+data, time_values = load_data()
 
 # Define a simple neural network class
 class MemristorNN(nn.Module):
@@ -60,7 +62,7 @@ def train_model(data):
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     
     for pressure, voltage in data.items():
-        X_train = torch.tensor(time, dtype=torch.float32).view(-1, 1)
+        X_train = torch.tensor(time_values, dtype=torch.float32).view(-1, 1)
         y_train = torch.tensor(voltage, dtype=torch.float32).view(-1, 1)
         
         if X_train.shape[0] != y_train.shape[0]:
@@ -81,25 +83,37 @@ st.write("Press a button to simulate memristor response to pressure.")
 
 model = train_model(data)  # Train the model
 
+def show_processing_animation():
+    with st.empty():
+        for _ in range(3):
+            st.write("🔄 Processing...")
+            time.sleep(0.5)
+            st.write("🟦")  # Simulated memristor block
+            time.sleep(0.5)
+
 selected_pressure = None
 if st.button("Apply 0.2 MPa"):
     selected_pressure = 0.2
+    show_processing_animation()
 elif st.button("Apply 0.3 MPa"):
     selected_pressure = 0.3
+    show_processing_animation()
 elif st.button("Apply 0.4 MPa"):
     selected_pressure = 0.4
+    show_processing_animation()
 
 if selected_pressure:
     model.load_state_dict(torch.load("memristor_model.pth"))
     model.eval()
     
-    X_test = torch.tensor(time, dtype=torch.float32).view(-1, 1)
+    X_test = torch.tensor(time_values, dtype=torch.float32).view(-1, 1)
     with torch.no_grad():
         predicted_voltage = model(X_test).numpy().flatten()
     
     # Plot the response
+    st.write("### Plot:")
     fig, ax = plt.subplots()
-    ax.plot(time, predicted_voltage, marker='o', linestyle='-', label=f'{selected_pressure} MPa')
+    ax.plot(time_values, predicted_voltage, marker='o', linestyle='-', label=f'{selected_pressure} MPa')
     ax.set_xlabel("Time")
     ax.set_ylabel("Voltage (V)")
     ax.set_title(f"Memristor Response to {selected_pressure} MPa")

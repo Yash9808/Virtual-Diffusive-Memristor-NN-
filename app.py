@@ -6,17 +6,31 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-# Load data from CSV files
+# Load data from GitHub
+RAW_GITHUB_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/"
+
 def load_data():
     data = {}
+    time_values = None
     pressures = [0.2, 0.3, 0.4]
     for p in pressures:
-        df = pd.read_csv(f"Delay_0.2sec_{p}MPa.csv")  # Assumes CSV has one column of voltage data
-        data[p] = df.values.flatten()
-    return data
+        filename = f"Delay_0.2sec_{p}MPa.csv"
+        url = RAW_GITHUB_URL + filename
+        df = pd.read_csv(url)  # Load from GitHub raw link
+        
+        # Ensure correct column names are used
+        df = df.rename(columns=lambda x: x.strip())  # Remove any extra spaces
+        
+        if "Time" in df.columns and "Channel A" in df.columns:
+            if time_values is None:
+                time_values = df["Time"].values  # Use the time column from the first file
+            data[p] = df["Channel A"].values  # Voltage data
+        else:
+            raise ValueError(f"Columns 'Time' and 'Channel A' not found in {filename}")
+    
+    return data, time_values
 
-data = load_data()
-time = np.arange(len(next(iter(data.values()))))  # Assuming same length for all data
+data, time = load_data()
 
 # Define a simple neural network class
 class MemristorNN(nn.Module):

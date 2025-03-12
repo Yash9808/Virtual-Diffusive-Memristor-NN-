@@ -18,14 +18,14 @@ def load_data():
     for p in pressures:
         filename = f"Delay_0.2sec_{p}MPa.csv"
         url = RAW_GITHUB_URL + filename
-        df = pd.read_csv(url)  # Load from GitHub raw link
+        df = pd.read_csv(url)
         
         # Ensure correct column names are used
-        df = df.rename(columns=lambda x: x.strip())  # Remove any extra spaces
+        df = df.rename(columns=lambda x: x.strip())
         
         if "Time" in df.columns and "Channel A" in df.columns:
             if time_values is None:
-                time_values = df["Time"].values  # Use the time column from the first file
+                time_values = df["Time"].values
             
             voltage_values = df["Channel A"].values
             
@@ -34,10 +34,11 @@ def load_data():
             time_values = time_values[:min_length]
             voltage_values = voltage_values[:min_length]
             
-            data[p] = voltage_values  # Voltage data
+            data[p] = voltage_values
         else:
             raise ValueError(f"Columns 'Time' and 'Channel A' not found in {filename}")
     
+    print("Loaded data:", data.keys())  # Debugging log
     return data, time_values
 
 data, time_values = load_data()
@@ -68,12 +69,15 @@ def train_model(data):
         if X_train.shape[0] != y_train.shape[0]:
             raise ValueError(f"Mismatch in data size: X_train ({X_train.shape[0]}) vs y_train ({y_train.shape[0]})")
         
-        for epoch in range(1000):  # Training loop
+        for epoch in range(500):  # Reduce epochs for faster training
             optimizer.zero_grad()
             outputs = model(X_train)
             loss = criterion(outputs, y_train)
             loss.backward()
             optimizer.step()
+            
+            if epoch % 100 == 0:
+                print(f"Epoch {epoch}, Loss: {loss.item()}")  # Debugging log
     
     torch.save(model.state_dict(), "memristor_model.pth")  # Save trained model
     return model
@@ -110,7 +114,6 @@ elif st.button("Apply 0.4 MPa"):
     show_processing_animation()
 
 if selected_pressure:
-    # Ensure model file exists before loading
     try:
         model.load_state_dict(torch.load("memristor_model.pth"))
         model.eval()
@@ -119,14 +122,19 @@ if selected_pressure:
         with torch.no_grad():
             predicted_voltage = model(X_test).numpy().flatten()
         
-        # Plot the response
-        st.write("### Plot:")
-        fig, ax = plt.subplots()
-        ax.plot(time_values, predicted_voltage, marker='o', linestyle='-', label=f'{selected_pressure} MPa')
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Voltage (V)")
-        ax.set_title(f"Memristor Response to {selected_pressure} MPa")
-        ax.legend()
-        st.pyplot(fig)
+        print("Predicted voltage sample:", predicted_voltage[:10])  # Debugging log
+        
+        # Ensure predictions are valid
+        if len(predicted_voltage) == 0:
+            st.error("No predictions generated. Check model training.")
+        else:
+            st.write("### Plot:")
+            fig, ax = plt.subplots()
+            ax.plot(time_values, predicted_voltage, marker='o', linestyle='-', label=f'{selected_pressure} MPa')
+            ax.set_xlabel("Time")
+            ax.set_ylabel("Voltage (V)")
+            ax.set_title(f"Memristor Response to {selected_pressure} MPa")
+            ax.legend()
+            st.pyplot(fig)
     except FileNotFoundError:
         st.error("Model file not found. Please retrain the model.")

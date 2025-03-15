@@ -20,7 +20,7 @@ class MemristorLSTM(nn.Module):
 
 # Load model
 model = MemristorLSTM()
-model.load_state_dict(torch.load("https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/edit/NN-pre-trained-model/memristor_lstm.pth"))
+model.load_state_dict(torch.load("https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/blob/NN-pre-trained-model/memristor_lstm.pth"))
 model.eval()
 
 # Fetch data

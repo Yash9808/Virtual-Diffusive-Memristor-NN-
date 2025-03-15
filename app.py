@@ -95,22 +95,45 @@ def encode_data_to_spikes(time_values, channel_values):
 # ✅ Generate Spikes with Pretrained Model
 def generate_spikes(pressure):
     time_values = data[pressure]["time"]
+    channel_values = data[pressure]["channel"]
+
+    # Debugging: Check for NaNs in the data
+    if np.any(np.isnan(time_values)) or np.any(np.isnan(channel_values)):
+        st.error("Data contains NaN values. Please check the input data.")
+        return
+
+    # Reshape the input to match LSTM's expected shape: (batch_size, seq_len, input_size)
     X_input = torch.tensor(time_values, dtype=torch.float32).view(-1, 1, 1)
     
-    with torch.no_grad():
-        channel_values = model(X_input).detach().cpu().numpy().flatten()
+    # Debugging: Print the input shape
+    print(f"Input shape: {X_input.shape}")
+    
+    try:
+        with torch.no_grad():
+            # Forward pass through the model
+            output = model(X_input)
+            
+            # Debugging: Print model output shape and first few values
+            print(f"Model output shape: {output.shape}")
+            channel_values_predicted = output.detach().cpu().numpy().flatten()
+            print(f"Predicted channel values (first 10): {channel_values_predicted[:10]}")
 
-    encoded_spikes = encode_data_to_spikes(time_values, channel_values)
+        # Encode the predicted channel values as spikes
+        encoded_spikes = encode_data_to_spikes(time_values, channel_values_predicted)
 
-    # Plot
-    plt.figure(figsize=(10, 5))
-    for i, spikes in enumerate(encoded_spikes[:50]):  
-        plt.eventplot(np.where(spikes > 0)[0], lineoffsets=i, colors='black')
+        # Plotting
+        plt.figure(figsize=(10, 5))
+        for i, spikes in enumerate(encoded_spikes[:50]):  # Display the first 50 spike trains
+            plt.eventplot(np.where(spikes > 0)[0], lineoffsets=i, colors='black')
 
-    plt.title(f"Spike Trains for Pressure {pressure} MPa")
-    plt.xlabel("Time Steps")
-    plt.ylabel("Neurons")
-    st.pyplot(plt)
+        plt.title(f"Spike Trains for Pressure {pressure} MPa")
+        plt.xlabel("Time Steps")
+        plt.ylabel("Neurons")
+        st.pyplot(plt)
+        
+    except Exception as e:
+        st.error(f"Error during model inference: {e}")
+        print(f"Error during model inference: {e}")
 
 # ✅ Streamlit App
 def app():

@@ -40,8 +40,13 @@ class MemristorLSTM(nn.Module):
 
 # ✅ Load Pretrained Model
 model = MemristorLSTM()
-model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
-model.eval()
+try:
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
+    model.eval()
+    st.success("Model loaded successfully.")
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    raise ValueError(f"Error loading model: {e}")
 
 # ✅ GitHub Raw Data URL
 RAW_GITHUB_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/"
@@ -93,7 +98,7 @@ def generate_spikes(pressure):
     X_input = torch.tensor(time_values, dtype=torch.float32).view(-1, 1, 1)
     
     with torch.no_grad():
-        channel_values = model(X_input).numpy().flatten()
+        channel_values = model(X_input).detach().cpu().numpy().flatten()
 
     encoded_spikes = encode_data_to_spikes(time_values, channel_values)
 

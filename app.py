@@ -20,11 +20,11 @@ class MemristorLSTM(nn.Module):
 
 # Load model
 model = MemristorLSTM()
-model.load_state_dict(torch.load("https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/memristor_lstm.pth"))
+model.load_state_dict(torch.load("https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/edit/NN-pre-trained-model/memristor_lstm.pth"))
 model.eval()
 
 # Fetch data
-RAW_GITHUB_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/"
+RAW_GITHUB_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/edit/NN-pre-trained-model/"
 
 def load_data():
     files = {

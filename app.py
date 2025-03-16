@@ -5,20 +5,26 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import requests
-import time
 from io import StringIO
 import os
+import time  # ⬅️ For live plotting
 
-# ✅ Model URL
+# ✅ Correct Raw GitHub URL for Model
 MODEL_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/memristor_lstm.pth"
 MODEL_PATH = "memristor_lstm.pth"
 
+# ✅ Download Model if Not Exists
 def download_model():
     if not os.path.exists(MODEL_PATH):
+        st.info("Downloading pretrained model...")
         response = requests.get(MODEL_URL, stream=True)
         if response.status_code == 200:
             with open(MODEL_PATH, "wb") as f:
                 f.write(response.content)
+            st.success("Model downloaded successfully.")
+        else:
+            st.error("Failed to download model. Check the URL.")
+            raise ValueError("Model download failed.")
 
 download_model()
 
@@ -33,71 +39,155 @@ class MemristorLSTM(nn.Module):
         lstm_out, _ = self.lstm(x)
         return self.fc(lstm_out[:, -1, :])
 
-# ✅ Load Model
+# ✅ Load Pretrained Model
 model = MemristorLSTM()
-model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
-model.eval()
+try:
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
+    model.eval()
+    st.success("Model loaded successfully.")
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    raise ValueError(f"Error loading model: {e}")
 
-# ✅ Load Data
+# ✅ GitHub Raw Data URL
 RAW_GITHUB_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/"
+
+# ✅ Load Data from GitHub
 def load_data():
-    files = {0.2: "Delay_0.2sec_0.2MPa.csv", 0.3: "Delay_0.2sec_0.3MPa.csv", 0.4: "Delay_0.2sec_0.4MPa.csv"}
+    files = {
+        0.2: "Delay_0.2sec_0.2MPa.csv",
+        0.3: "Delay_0.2sec_0.3MPa.csv",
+        0.4: "Delay_0.2sec_0.4MPa.csv"
+    }
+    
     data = {}
     for pressure, filename in files.items():
         url = RAW_GITHUB_URL + filename
         response = requests.get(url)
+        
         if response.status_code == 200:
             df = pd.read_csv(StringIO(response.text))
             df.columns = df.columns.str.strip()
+            
             if "Time" in df.columns and "Channel A" in df.columns:
+                # Normalize Data
                 time_values = df["Time"].values
                 channel_values = df["Channel A"].values
                 time_values = (time_values - np.min(time_values)) / (np.max(time_values) - np.min(time_values))
                 channel_values = (channel_values - np.min(channel_values)) / (np.max(channel_values) - np.min(channel_values))
-                data[pressure] = {"time": time_values, "channel": channel_values}
+
+                data[pressure] = {
+                    "time": time_values,
+                    "channel": channel_values
+                }
+        else:
+            st.error(f"Failed to load {filename}")
+    
     return data
 
-data = load_data()
-
+# ✅ Improved Spike Encoding using Poisson Process
 def encode_data_to_spikes(time_values, channel_values):
-    return np.random.poisson(lam=channel_values[:, None] * 10, size=(len(time_values), 100))
+    spike_trains = []
+    for time, channel in zip(time_values, channel_values):
+        spike_train = np.random.poisson(lam=channel * 10, size=100)  # Poisson encoding
+        spike_trains.append(spike_train)
+    return np.array(spike_trains)
 
-# ✅ Real-time Plotting
-import matplotlib.animation as animation
-
-def live_plot(pressure):
+# ✅ Generate Spikes with Pretrained Model
+def generate_spikes(pressure):
     time_values = data[pressure]["time"]
+    channel_values = data[pressure]["channel"]
+
+    # Reshape the input to match LSTM's expected shape: (batch_size, seq_len, input_size)
     X_input = torch.tensor(time_values, dtype=torch.float32).view(-1, 1, 1)
-    with torch.no_grad():
-        channel_values = model(X_input).detach().cpu().numpy().flatten()
     
-    encoded_spikes = encode_data_to_spikes(time_values, channel_values)
+    try:
+        with torch.no_grad():
+            # Forward pass through the model
+            output = model(X_input)
+            channel_values_predicted = output.detach().cpu().numpy().flatten()
+
+        # Encode the predicted channel values as spikes
+        encoded_spikes = encode_data_to_spikes(time_values, channel_values_predicted)
+
+        return encoded_spikes
     
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-    fig.suptitle(f"Live Spiking and Memristor Output for {pressure} MPa")
-    
-    start_time = time.time()
-    while time.time() - start_time < 90:  # 1.5 minutes
-        ax1.clear()
-        ax2.clear()
-        ax1.eventplot(np.where(encoded_spikes[:50] > 0)[1], lineoffsets=np.arange(50), colors='black')
-        ax1.set_title("Live Spiking Activity")
+    except Exception as e:
+        st.error(f"Error during model inference: {e}")
+        return None
+
+# ✅ Live Updating Action Potential & Voltage Spike Plot
+def live_spike_plot(pressure):
+    st.subheader(f"Live Spiking Action Potential & Voltage Spikes at {pressure} MPa")
+
+    # Streamlit containers for live updates
+    spike_plot = st.empty()
+    voltage_plot = st.empty()
+
+    start_time = time.time()  # Track running time
+
+    while time.time() - start_time < 90:  # Run for 1.5 minutes (90 seconds)
+        encoded_spikes = generate_spikes(pressure)
+
+        if encoded_spikes is None:
+            return
+
+        # Simulated Voltage Spike Output (Based on Predicted Channel Values)
+        voltage_values = np.sum(encoded_spikes, axis=1) / encoded_spikes.shape[1]  # Normalize sum of spikes
+        time_steps = np.arange(len(voltage_values))
+
+        # Spike Train Plot
+        fig1, ax1 = plt.subplots(figsize=(10, 5))
+        for i, spikes in enumerate(encoded_spikes[:50]):  # Display first 50 spike trains
+            ax1.eventplot(np.where(spikes > 0)[0], lineoffsets=i, colors='black')
+
+        ax1.set_title(f"Continuous Spike Train for {pressure} MPa")
         ax1.set_xlabel("Time Steps")
         ax1.set_ylabel("Neurons")
-        ax2.plot(time_values[:50], channel_values[:50], color='r')
-        ax2.set_title("Live Voltage Output (V) vs. Time Steps")
+
+        spike_plot.pyplot(fig1)  # Update spike train plot
+
+        # Voltage Spike Plot
+        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        ax2.plot(time_steps, voltage_values, color='red', marker='o', markersize=2, linestyle='-')
+        ax2.set_title(f"Memristor Voltage Spikes for {pressure} MPa")
         ax2.set_xlabel("Time Steps")
         ax2.set_ylabel("Voltage (V)")
-        st.pyplot(fig)
-        time.sleep(2)  # Refresh every 2 seconds
+
+        voltage_plot.pyplot(fig2)  # Update voltage plot
+
+        time.sleep(0.2)  # Maintain update delay of 0.2 seconds
+
+    st.warning("Live plotting stopped after 1.5 minutes.")
 
 # ✅ Streamlit App
 def app():
     st.title("Memristor Response Spike Generator")
     st.write("Generate spike patterns based on memristor behavior.")
+
     pressure = st.selectbox("Select Pressure (MPa)", [0.2, 0.3, 0.4])
-    if st.button(f"Start Live Plot for {pressure} MPa"):
-        live_plot(pressure)
+    
+    if st.button(f"Generate Static Spikes for {pressure} MPa"):
+        st.info(f"Generating spikes for {pressure} MPa...")
+        encoded_spikes = generate_spikes(pressure)
+
+        if encoded_spikes is not None:
+            # Static Plot
+            fig, ax = plt.subplots(figsize=(10, 5))
+            for i, spikes in enumerate(encoded_spikes[:50]):  
+                ax.eventplot(np.where(spikes > 0)[0], lineoffsets=i, colors='black')
+
+            ax.set_title(f"Spike Trains for Pressure {pressure} MPa")
+            ax.set_xlabel("Time Steps")
+            ax.set_ylabel("Neurons")
+            st.pyplot(fig)
+
+        st.success("Spike generation complete!")
+
+    if st.button(f"Start Continuous Spiking for {pressure} MPa"):
+        st.info(f"Generating continuous spikes for {pressure} MPa...")
+        live_spike_plot(pressure)
 
 if __name__ == "__main__":
+    data = load_data()
     app()

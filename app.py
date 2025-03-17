@@ -9,7 +9,6 @@ from io import StringIO
 import os
 import time  # For live plotting
 ###################################################
-
 # 🎯 Title & Introduction
 st.title("Memristor-Based Neural System")
 st.write("This app visualizes the spike train generation and memristor voltage response based on applied pressure.")
@@ -17,7 +16,7 @@ st.write("This app visualizes the spike train generation and memristor voltage r
 # 📸 Display Concept Image from GitHub
 st.subheader("📸 App Concept Image")
 image_url = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/NN-pre-trained-model/Clipboard01.jpg"
-st.image(image_url, caption="App Concept", use_column_width=True)
+st.image(image_url, caption="App Concept", use_container_width=True)  # ✅ Updated parameter
 
 # 📚 Research Papers Section
 st.subheader("📄 Related Research Papers")
@@ -26,6 +25,7 @@ st.markdown("[🔗 Memristor Applications in Bio-Inspired AI (IOP Science)](http
 
 # 🚀 Future Work
 st.write("More details on implementation and scientific background can be found in the papers above.")
+
 ###################################################
 
 

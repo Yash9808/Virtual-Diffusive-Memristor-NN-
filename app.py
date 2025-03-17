@@ -7,7 +7,7 @@ import torch.nn as nn
 import requests
 from io import StringIO
 import os
-import time  # ⬅️ For live plotting
+import time  # For live plotting
 
 # ✅ Correct Raw GitHub URL for Model
 MODEL_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/memristor_lstm.pth"
@@ -146,6 +146,7 @@ def live_spike_plot(pressure, time_limit):
         ax1.set_ylabel("Neurons")
 
         spike_plot.pyplot(fig1)  # Update spike train plot
+        plt.close(fig1)  # Close the figure to release memory
 
         # Voltage Spike Plot
         fig2, ax2 = plt.subplots(figsize=(10, 5))
@@ -155,8 +156,7 @@ def live_spike_plot(pressure, time_limit):
         ax2.set_ylabel("Voltage (V)")
 
         voltage_plot.pyplot(fig2)  # Update voltage plot
-
-        time.sleep(0.2)  # Maintain update delay of 0.2 seconds
+        plt.close(fig2)  # Close the figure to release memory
 
     st.warning(f"Live plotting stopped after {time_limit/60} minutes.")
 

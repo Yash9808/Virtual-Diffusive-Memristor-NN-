@@ -8,6 +8,27 @@ import requests
 from io import StringIO
 import os
 import time  # For live plotting
+###################################################
+
+# 🎯 Title & Introduction
+st.title("Memristor-Based Neural System")
+st.write("This app visualizes the spike train generation and memristor voltage response based on applied pressure.")
+
+# 📸 Display Concept Image from GitHub
+st.subheader("📸 App Concept Image")
+image_url = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/NN-pre-trained-model/Clipboard01.jpg"
+st.image(image_url, caption="App Concept", use_column_width=True)
+
+# 📚 Research Papers Section
+st.subheader("📄 Related Research Papers")
+st.markdown("[🔗 Memristor-Based Neuromorphic Computing (Nature)](https://www.nature.com/articles/s44172-024-00315-z)", unsafe_allow_html=True)
+st.markdown("[🔗 Memristor Applications in Bio-Inspired AI (IOP Science)](https://iopscience.iop.org/article/10.1088/2631-8695/ad937a)", unsafe_allow_html=True)
+
+# 🚀 Future Work
+st.write("More details on implementation and scientific background can be found in the papers above.")
+###################################################
+
+
 
 # ✅ Correct Raw GitHub URL for Model
 MODEL_URL = "https://raw.githubusercontent.com/Yash9808/Virtual-Diffusive-Memristor-NN-/main/memristor_lstm.pth"
